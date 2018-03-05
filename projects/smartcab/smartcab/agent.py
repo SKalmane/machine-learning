@@ -12,11 +12,10 @@ class LearningAgent(Agent):
         super(LearningAgent, self).__init__(env)     # Set the agent in the evironment 
         self.planner = RoutePlanner(self.env, self)  # Create a route planner
         self.valid_actions = self.env.valid_actions  # The set of valid actions
-
+        
         # Set parameters of the learning agent
         self.learning = learning # Whether the agent is expected to learn
         self.Q = dict()          # Create a Q-table which will be a dictionary of tuples
-        epsilon = random.random()
         self.epsilon = epsilon   # Random exploration factor
         self.alpha = alpha       # Learning factor
 
@@ -24,7 +23,7 @@ class LearningAgent(Agent):
         ## TO DO ##
         ###########
         # Set any additional class parameters as needed
-
+        self.trial_num = 1;
 
     def reset(self, destination=None, testing=False):
         """ The reset function is called at the beginning of each trial.
@@ -44,7 +43,12 @@ class LearningAgent(Agent):
             self.epsilon = 0.0
             self.alpha = 0.0
         else:
-            self.epsilon = self.epsilon * self.epsilon
+            self.epsilon = math.exp(-(0.98 * self.trial_num))
+            self.trial_num = self.trial_num + 1;
+            #self.epsilon = self.epsilon * self.epsilon
+            # self.epsilon = self.epsilon - 0.05
+            # if (self.epsilon <= 0):
+            #    self.epsilon = 0
             
         return None
 
@@ -62,13 +66,13 @@ class LearningAgent(Agent):
         ## TO DO ##
         ###########
         # Set 'state' as a tuple of relevant data for the agent        
-        state = (waypoint, inputs['light'], inputs['oncoming'])
+        state = (waypoint, inputs['light'], inputs['left'], inputs['oncoming'])
 
         return state
 
 
     def get_maxQ(self, state):
-        """ The get_max_Q function is called when the agent is asked to find the
+        """ The get_maxQ function is called when the agent is asked to find the
             maximum Q-value of all actions based on the 'state' the smartcab is in. """
 
         ########### 
@@ -78,10 +82,6 @@ class LearningAgent(Agent):
         
         actionQValuesDict = self.Q[state]
         maxQValue = max(actionQValuesDict.values())
-        for (action, QValue) in actionQValuesDict.items():
-            if (QValue > maxQValue):
-                maxQValue = QValue
-
         return maxQValue
 
 
@@ -133,13 +133,10 @@ class LearningAgent(Agent):
         # When not learning, choose a random action
         # When learning, choose a random action with 'epsilon' probability
         #   Otherwise, choose an action with the highest Q-value for the current state
-        if self.learning:
-            random_val = random.random()
-            if(random_val <= self.epsilon):                
-                action = random.choice(self.valid_actions)
-            else:
-                maxQ = self.get_actionWithMaxQValue(self.state)
-                action = random.choice(maxQ)                
+        random_val = random.random()
+        if (self.learning or random_val > self.epsilon):
+            maxQ = self.get_actionWithMaxQValue(self.state)
+            action = random.choice(maxQ)        
         else:
             action = random.choice(self.valid_actions)
             
@@ -148,7 +145,7 @@ class LearningAgent(Agent):
 
     def learn(self, state, action, reward):
         """ The learn function is called after the agent completes an action and
-            receives an award. This function does not consider future rewards 
+            receives a reward. This function does not consider future rewards 
             when conducting learning. """
 
         ########### 
@@ -156,11 +153,7 @@ class LearningAgent(Agent):
         ###########
         # When learning, implement the value iteration update rule
         #   Use only the learning rate 'alpha' (do not use the discount factor 'gamma')
-        next_state = self.build_state() #Find the next state
-        self.createQ(next_state)        # Create 'next_state' in Q-table
-        present_value = self.Q[state][action]
-        gamma = 0.0
-        self.Q[state][action] = ((1 - self.alpha) * self.Q[state][action]) + (self.alpha * (reward + gamma * self.get_maxQ(next_state)))
+        self.Q[state][action] = ((1 - self.alpha) * self.Q[state][action]) + (self.alpha * (reward))
         return
 
 
